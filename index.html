@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultGuard Pro | Enterprise-Grade Local Security</title>
+    <meta name="description" content="A professional, high-security offline credential manager with PBKDF2 encryption.">
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- CryptoJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dark-theme">
+    <div id="app">
+        <!-- Auth Screen -->
+        <section id="auth-screen" class="screen active">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="logo">
+                        <i data-lucide="shield-check"></i>
+                        <span>VAULTGUARD<span
+                                style="color:var(--text-muted);font-weight:400;font-size:0.8rem;margin-left:0.5rem;">PRO</span></span>
+                    </div>
+                    <h1 id="auth-title">Initialize Terminal</h1>
+                    <p id="auth-subtitle">Establish your master key for hardware-level local encryption.</p>
+                </div>
+
+                <form id="auth-form">
+                    <div class="form-group">
+                        <label for="master-password">Master Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="master-password" placeholder="••••••••••••" required
+                                autocomplete="current-password">
+                            <button type="button" class="toggle-password" tabindex="-1">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                        <div id="password-strength" class="strength-meter">
+                            <div class="meter-bar"></div>
+                            <span class="meter-text">Entropy Level: Unknown</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="confirm-password-group">
+                        <label for="confirm-password">Verify Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirm-password" placeholder="••••••••••••"
+                                autocomplete="new-password">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <span id="auth-submit-text">Unlock Vault</span>
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+
+                    <p class="auth-footer"
+                        style="text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-muted);">
+                        <i data-lucide="cpu" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>
+                        Secure local-only execution. Zero external data calls.
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Screen -->
+        <section id="main-screen" class="screen">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">
+                        <i data-lucide="shield-check"></i>
+                        <span>VAULTGUARD</span>
+                    </div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <button class="nav-item active" data-view="dashboard">
+                        <i data-lucide="layout-grid"></i>
+                        <span>Overview</span>
+                    </button>
+                    <button class="nav-item" data-view="add-credential">
+                        <i data-lucide="plus"></i>
+                        <span>Add Entry</span>
+                    </button>
+                    <button class="nav-item" data-view="all-credentials">
+                        <i data-lucide="database"></i>
+                        <span>Active Vault</span>
+                    </button>
+                    <div class="nav-divider"></div>
+                    <button class="nav-item" data-view="security-audit">
+                        <i data-lucide="activity"></i>
+                        <span>Security Audit</span>
+                    </button>
+                    <button class="nav-item" data-view="secure-backup">
+                        <i data-lucide="hard-drive"></i>
+                        <span>Data Export</span>
+                    </button>
+                    <button class="nav-item" data-view="settings">
+                        <i data-lucide="sliders"></i>
+                        <span>Core Settings</span>
+                    </button>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <button id="btn-logout" class="nav-item text-danger">
+                        <i data-lucide="lock"></i>
+                        <span>Seal Vault</span>
+                    </button>
+                </div>
+            </aside>
+
+            <main class="content-area">
+                <header class="content-header">
+                    <h2 id="view-title">Overview</h2>
+                    <div id="session-timer" class="session-timer">
+                        <i data-lucide="clock"></i>
+                        <span>SESSION EXPIRES IN <span id="timer-val">60</span>S</span>
+                    </div>
+                </header>
+
+                <div id="view-container">
+                    <!-- Dashboard View -->
+                    <div id="view-dashboard" class="view active">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon blue">
+                                    <i data-lucide="key-round"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-label">PROTECTED ITEMS</span>
+                                    <span class="stat-value" id="stat-total">0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon green">
+                                    <i data-lucide="shield-check"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-label">ENCRYPTION STATUS</span>
+                                    <span class="stat-value text-success">AES-256 GCM</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i data-lucide="zap" style="color:var(--warning)"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-label">SECURITY LEVEL</span>
+                                    <span class="stat-value" style="color:var(--warning)">High</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="recent-section">
+                            <div class="section-header"
+                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+                                <h3 style="font-size:1.25rem;">RECENT ACCESS</h3>
+                                <button class="btn btn-text" data-action="view-all">VIEW ALL ENTRIES</button>
+                            </div>
+                            <div id="recent-list" class="credential-grid">
+                                <p class="empty-state">No credentials stored yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Credential View -->
+                    <div id="view-add-credential" class="view">
+                        <div class="form-card">
+                            <form id="credential-form">
+                                <input type="hidden" id="credential-id">
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label for="cred-platform">Application / Platform</label>
+                                        <input type="text" id="cred-platform"
+                                            placeholder="e.g. AWS Production, Corporate Email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cred-username">Identity / Username</label>
+                                        <input type="text" id="cred-username" placeholder="admin@domain.com" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cred-password">Secret Key / Password</label>
+                                        <div class="input-wrapper">
+                                            <input type="password" id="cred-password" placeholder="••••••••••••"
+                                                required>
+                                            <button type="button" class="toggle-password" tabindex="-1">
+                                                <i data-lucide="eye"></i>
+                                            </button>
+                                        </div>
+                                        <button type="button" id="btn-generate-pw" class="btn btn-sm btn-outline mt-2">
+                                            <i data-lucide="refresh-cw"></i>
+                                            GENERATE SECURE TOKEN
+                                        </button>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cred-apikey">API Endpoint / Key (Optional)</label>
+                                        <input type="text" id="cred-apikey" placeholder="sk_live_...">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label for="cred-notes">Internal Notes</label>
+                                        <textarea id="cred-notes" rows="4"
+                                            placeholder="Security context or recovery hints..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary" id="btn-save-credential">
+                                        <i data-lucide="save"></i>
+                                        <span>COMMIT ENTRY</span>
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" id="btn-cancel-edit">ABORT</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- All Credentials View -->
+                    <div id="view-all-credentials" class="view">
+                        <div class="filter-bar">
+                            <div class="search-wrapper">
+                                <i data-lucide="search"></i>
+                                <input type="text" id="search-creds" placeholder="Filter by platform or identity...">
+                            </div>
+                        </div>
+                        <div id="all-creds-list" class="credential-grid">
+                            <!-- All items injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Security Audit View -->
+                    <div id="view-security-audit" class="view">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon green">
+                                    <i data-lucide="check-shield"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-label">TOTAL SESSIONS</span>
+                                    <span class="stat-value" id="audit-session-count">0</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon red">
+                                    <i data-lucide="alert-triangle" style="color:var(--danger)"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-label">FAILED ATTEMPTS</span>
+                                    <span class="stat-value text-danger" id="audit-failed-count">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="audit-section">
+                            <h3 style="margin-bottom:1.5rem;">ACCESS LOGS</h3>
+                            <table class="audit-log">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Event</th>
+                                        <th>Status</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-log-body">
+                                    <!-- Audit entries injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Secure Backup View -->
+                    <div id="view-secure-backup" class="view">
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <i data-lucide="binary"></i>
+                            </div>
+                            <h3>Encrypted Data Management</h3>
+                            <p>VaultGuard Pro uses locally-held AES-256 keys. Your backup remains encrypted even outside
+                                this environment.</p>
+
+                            <div class="backup-actions">
+                                <div class="backup-card">
+                                    <h4>Cold Export</h4>
+                                    <p>Strictly encrypted JSON payload for offline storage.</p>
+                                    <button id="btn-export" class="btn btn-primary btn-block">
+                                        <i data-lucide="download"></i>
+                                        DOWNLOAD BLOB
+                                    </button>
+                                </div>
+                                <div class="backup-card">
+                                    <h4>Restore Blob</h4>
+                                    <p>Merge or overwrite existing vault from cold storage.</p>
+                                    <label for="import-file" class="btn btn-outline btn-block cursor-pointer">
+                                        <i data-lucide="upload"></i>
+                                        UPLOAD BLOB
+                                    </label>
+                                    <input type="file" id="import-file" accept=".json" hidden>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings View -->
+                    <div id="view-settings" class="view">
+                        <div class="settings-list">
+                            <div class="settings-item">
+                                <div class="settings-info">
+                                    <h4>Emergency Recovery Key</h4>
+                                    <p>Generate a 256-bit recovery string. Keep this offline.</p>
+                                </div>
+                                <button class="btn btn-outline" id="btn-gen-recovery">GENERATE KEY</button>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-info">
+                                    <h4>Rotate Master Password</h4>
+                                    <p>Re-encrypt entries with a new master key.</p>
+                                </div>
+                                <button class="btn btn-outline" id="btn-trigger-change-pw">RE-KEY VAULT</button>
+                            </div>
+                            <div class="settings-item">
+                                <div class="settings-info">
+                                    <h4>Terminal Purge</h4>
+                                    <p class="text-danger">Destroy all local data and cryptographic salts.</p>
+                                </div>
+                                <button class="btn btn-danger" id="btn-purge">WIPE TERMINAL</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- Verification Modal -->
+        <div id="verify-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h3>VERIFY AUTHORITY</h3>
+                <p>Hardware-level decryption requires your master password for this operation.</p>
+                <form id="verify-form">
+                    <div class="form-group">
+                        <input type="password" id="verify-password" placeholder="••••••••••••" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">AUTHORIZE</button>
+                        <button type="button" class="btn btn-secondary" id="btn-close-verify">CANCEL</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
